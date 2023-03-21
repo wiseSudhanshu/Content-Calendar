@@ -2,3 +2,32 @@
  * All of the CSS for your admin-specific functionality should be
  * included in this file.
  */
+
+ /* Style for the table */
+ #content-calendar-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-top: 20px;
+  }
+  
+  /* Style for the table headers */
+  #content-calendar-table th {
+    background-color: #ddd;
+    border: 1px solid #ccc;
+    font-weight: bold;
+    padding: 10px;
+    text-align: center;
+  }
+  
+  /* Style for the table data */
+  #content-calendar-table td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: center;
+  }
+  
+  /* Alternate row color */
+  #content-calendar-table tr:nth-child(even) {
+    background-color: #f2f2f2;
+  }
+  
