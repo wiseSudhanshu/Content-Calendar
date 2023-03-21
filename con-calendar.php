@@ -80,3 +80,142 @@ function run_con_calendar() {
 
 }
 run_con_calendar();
+
+
+// Add menu item
+function content_calendar_plugin_menu() {
+    add_menu_page( 'Content Calendar', 'Content Calendar', 'manage_options', 'content-calendar', 'content_calendar_plugin_page' );
+}
+add_action( 'admin_menu', 'content_calendar_plugin_menu' );
+
+
+// Create database table
+function content_calendar_plugin_create_table() {
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'content_calendar';
+    $charset_collate = $wpdb->get_charset_collate();
+    $sql = "CREATE TABLE $table_name (
+        id int(11) NOT NULL AUTO_INCREMENT,
+        day date NOT NULL,
+        occasion varchar(255) NOT NULL,
+        post_title varchar(255) NOT NULL,
+        author int(11) NOT NULL,
+        reviewer int(11) NOT NULL,
+        PRIMARY KEY  (id)
+    ) $charset_collate;";
+    require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+    dbDelta( $sql );
+}
+register_activation_hook( __FILE__, 'content_calendar_plugin_create_table' );
+
+
+// Create page content
+function content_calendar_plugin_page() {
+    ?>
+    <div class="wrap">
+        <h1>Content Calendar</h1>
+        <form method="post" >
+            <?php
+            // Add nonce field for security
+            wp_nonce_field( 'content_calendar_plugin_save', 'content_calendar_plugin_nonce' );
+            ?>
+            <table class="form-table">
+                <tr>
+                    <th><label for="day">Day</label></th>
+                    <td><input type="date" name="day" id="day" class="regular-text" /></td>
+                </tr>
+                <tr>
+                    <th><label for="occasion">Occasion</label></th>
+                    <td><input type="text" name="occasion" id="occasion" class="regular-text" /></td>
+                </tr>
+                <tr>
+                    <th><label for="post_title">Post Title</label></th>
+                    <td><input type="text" name="post_title" id="post_title" class="regular-text" /></td>
+                </tr>
+                <tr>
+                    <th><label for="author">Author</label></th>
+                    <td>
+                        <select name="author" id="author">
+                            <?php
+                            // Get all WordPress users
+                            $users = get_users();
+                            foreach ( $users as $user ) {
+                                echo '<option value="' . $user->ID . '">' . $user->user_nicename . '</option>';
+                            }
+                            ?>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <th><label for="reviewer">Reviewer</label></th>
+                    <td>
+                        <select name="reviewer" id="reviewer">
+                            <?php
+                            // Get all WordPress users other than the author
+                            foreach ( $users as $user ) {
+                                if ( $user->ID != get_current_user_id() ) {
+                                    echo '<option value="' . $user->ID . '">' . $user->user_nicename . '</option>';
+                                }
+                            }
+                            ?>
+                        </select>
+                    </td>
+                </tr>
+            </table>
+            <?php submit_button( 'Add Content', 'primary', 'add_content' ); ?>
+        </form>
+    </div>
+    <?php
+
+    
+
+    // Verify nonce
+    if ( !isset( $_POST['content_calendar_plugin_nonce'] ) || !wp_verify_nonce( $_POST['content_calendar_plugin_nonce'], 'content_calendar_plugin_save' ) || ! isset($_POST['add_content']) ) {
+        return;
+    }
+
+    // Save form data to database
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'content_calendar';
+    $data = array(
+        'day' => sanitize_text_field( $_POST['day'] ),
+        'occasion' => sanitize_text_field( $_POST['occasion'] ),
+        'post_title' => sanitize_text_field( $_POST['post_title'] ),
+        'author' => sanitize_text_field( $_POST['author'] ),
+        'reviewer' => sanitize_text_field( $_POST['reviewer'] )
+	);
+	$wpdb->insert( $table_name, $data );
+
+    ?>
+
+    <h3>Content Calendar</h3>
+    <table id="content-calendar-table">
+        <tr>
+            <th>Day</th>
+            <th>Occasion</th>
+            <th>Post Title</th>
+            <th>Author</th>
+            <th>Reviewer</th>
+        </tr>
+
+    <?php
+
+	// Display the table
+    $results = $wpdb->get_results("SELECT * FROM $table_name");
+
+
+    if($results) {
+        ?>
+            <?php foreach ($results as $row) { ?>
+                <tr>
+                    <td><?php echo $row->day; ?></td>
+                    <td><?php echo $row->occasion; ?></td>
+                    <td><?php echo $row->post_title; ?></td>
+                    <td><?php echo get_user_by('ID', $row->author)->display_name; ?></td>
+                    <td><?php echo get_user_by('ID', $row->reviewer)->display_name; ?></td>
+                </tr>
+            <?php } ?>
+        </table>
+        <?php 
+    }
+}
